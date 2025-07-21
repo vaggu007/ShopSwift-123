@@ -247,6 +247,13 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+
+  // Payment integration
+  stripeCustomerId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
   
 }, {
   timestamps: true,
