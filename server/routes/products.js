@@ -1,101 +1,162 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const { body, param, query } = require('express-validator');
 
-console.log("products.js loaded! __dirname:", __dirname);
+const {
+  getProducts,
+  getProduct,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  searchProducts,
+  getProductsByCategory,
+  addProductReview,
+  updateProductReview,
+  deleteProductReview,
+  updateProductStock,
+  getFeaturedProducts,
+  getTrendingProducts,
+  getNewArrivals
+} = require('../controllers/productController');
+
+const { protect, authorize, optionalAuth } = require('../middleware/auth');
+const { handleValidationErrors } = require('../middleware/errorHandler');
+
 const router = express.Router();
 
-// Improved function with error handling
-function loadProducts() {
-  const dataPath = path.join(__dirname, '../data/products.json');
-  try {
-    const jsonData = fs.readFileSync(dataPath, 'utf8');
-    return JSON.parse(jsonData);
-  } catch (err) {
-    // Log error for debugging
-    console.error("Error loading products.json:", err.message);
-    return null; // Indicate failure
-  }
-}
+// Validation middleware
+const createProductValidation = [
+  body('name')
+    .trim()
+    .isLength({ min: 2, max: 200 })
+    .withMessage('Product name must be between 2 and 200 characters'),
+  body('description')
+    .trim()
+    .isLength({ min: 10, max: 2000 })
+    .withMessage('Description must be between 10 and 2000 characters'),
+  body('price')
+    .isFloat({ min: 0 })
+    .withMessage('Price must be a positive number'),
+  body('category')
+    .isMongoId()
+    .withMessage('Please provide a valid category ID'),
+  body('brand')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Brand is required and must not exceed 100 characters'),
+  body('sku')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('SKU is required and must not exceed 50 characters'),
+  body('stock')
+    .isInt({ min: 0 })
+    .withMessage('Stock must be a non-negative integer')
+];
 
+const updateProductValidation = [
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 200 })
+    .withMessage('Product name must be between 2 and 200 characters'),
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ min: 10, max: 2000 })
+    .withMessage('Description must be between 10 and 2000 characters'),
+  body('price')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Price must be a positive number'),
+  body('category')
+    .optional()
+    .isMongoId()
+    .withMessage('Please provide a valid category ID'),
+  body('brand')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Brand must not exceed 100 characters'),
+  body('stock')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Stock must be a non-negative integer')
+];
 
-router.get('/', (req, res) => {
-  let products = loadProducts();
-  if (!products) {
-    return res.status(500).json({ error: 'Could not load products data.' });
-  }
+const reviewValidation = [
+  body('rating')
+    .isInt({ min: 1, max: 5 })
+    .withMessage('Rating must be between 1 and 5'),
+  body('comment')
+    .trim()
+    .isLength({ min: 5, max: 1000 })
+    .withMessage('Comment must be between 5 and 1000 characters')
+];
 
-  // Filter by category
-  if (req.query.category) {
-    products = products.filter(
-      p => p.category.toLowerCase() === req.query.category.toLowerCase()
-    );
-  }
+const stockUpdateValidation = [
+  body('quantity')
+    .isInt({ min: 0 })
+    .withMessage('Quantity must be a non-negative integer'),
+  body('operation')
+    .optional()
+    .isIn(['set', 'add', 'subtract'])
+    .withMessage('Operation must be set, add, or subtract')
+];
 
-  // Filter by inStock
-  if (req.query.inStock === 'true') {
-    products = products.filter(p => p.inStock === true);
-  }
+const mongoIdValidation = [
+  param('id')
+    .isMongoId()
+    .withMessage('Please provide a valid product ID')
+];
 
-  // Search
-  if (req.query.search) {
-    const q = req.query.search.toLowerCase();
-    products = products.filter(
-      p =>
-        p.name.toLowerCase().includes(q) ||
-        (p.description && p.description.toLowerCase().includes(q))
-    );
-  }
+// Public routes
+router.get('/featured', getFeaturedProducts);
+router.get('/trending', getTrendingProducts);
+router.get('/new-arrivals', getNewArrivals);
+router.get('/search', searchProducts);
+router.get('/category/:categoryId', getProductsByCategory);
+router.get('/', optionalAuth, getProducts);
+router.get('/:id', optionalAuth, getProduct);
 
-  // Sort
-  if (req.query.sort === 'price_asc') {
-    products = products.sort((a, b) => a.price - b.price);
-  } else if (req.query.sort === 'price_desc') {
-    products = products.sort((a, b) => b.price - a.price);
-  }
+// Protected routes - Reviews
+router.use(protect); // All routes below require authentication
 
-  // Pagination
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || products.length;
-  const start = (page - 1) * limit;
-  const paginated = products.slice(start, start + limit);
+router.post('/:id/reviews', 
+  mongoIdValidation, 
+  reviewValidation, 
+  handleValidationErrors, 
+  addProductReview
+);
 
-  res.json({
-    total: products.length,
-    page,
-    limit,
-    products: paginated
-  });
-});
+router.put('/:id/reviews/:reviewId', 
+  [
+    param('id').isMongoId().withMessage('Please provide a valid product ID'),
+    param('reviewId').isMongoId().withMessage('Please provide a valid review ID'),
+    ...reviewValidation
+  ],
+  handleValidationErrors, 
+  updateProductReview
+);
 
-// GET /api/products/:id
-router.get('/:id', (req, res) => {
-  const products = loadProducts();
-  if (!products) {
-    return res.status(500).json({ error: 'Could not load products data.' });
-  }
-  const product = products.find(p => String(p.id) === String(req.params.id));
-  if (product) {
-    res.json(product);
-  } else {
-    res.status(404).json({ error: 'Product not found' });
-  }
-});
+router.delete('/:id/reviews/:reviewId', 
+  [
+    param('id').isMongoId().withMessage('Please provide a valid product ID'),
+    param('reviewId').isMongoId().withMessage('Please provide a valid review ID')
+  ],
+  handleValidationErrors, 
+  deleteProductReview
+);
 
-// GET /api/products/:id/reviews
-router.get('/:id/reviews', (req, res) => {
-  const products = loadProducts();
-  if (!products) {
-    return res.status(500).json({ error: 'Could not load products data.' });
-  }
-  const product = products.find(p => String(p.id) === String(req.params.id));
-  if (product && product.reviews) {
-    res.json(product.reviews);
-  } else if (product) {
-    res.status(404).json({ error: 'No reviews found for this product.' });
-  } else {
-    res.status(404).json({ error: 'Product not found' });
-  }
-});
+// Admin only routes
+router.use(authorize('admin')); // All routes below require admin role
+
+router.post('/', createProductValidation, handleValidationErrors, createProduct);
+router.put('/:id', mongoIdValidation, updateProductValidation, handleValidationErrors, updateProduct);
+router.delete('/:id', mongoIdValidation, handleValidationErrors, deleteProduct);
+router.put('/:id/stock', 
+  mongoIdValidation, 
+  stockUpdateValidation, 
+  handleValidationErrors, 
+  updateProductStock
+);
 
 module.exports = router;
