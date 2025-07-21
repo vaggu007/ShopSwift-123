@@ -1,0 +1,30 @@
+[
+    {
+      "id": 1,
+      "name": "Smart Watch",
+      "description": "Feature-rich smart watch for fitness and notifications.",
+      "price": 79.99,
+      "category": "Electronics",
+      "image": "/assets/smartwatch.jpg",
+      "rating": 4.7,
+      "inStock": true,
+      "reviews": [
+        {"user": "Jane", "comment": "Great battery life!", "stars": 5},
+        {"user": "Tom", "comment": "Sleek and stylish.", "stars": 4}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Wireless Earbuds",
+      "description": "High-quality sound with true wireless freedom.",
+      "price": 59.99,
+      "category": "Electronics",
+      "image": "/assets/earbuds.jpg",
+      "rating": 4.5,
+      "inStock": false,
+      "reviews": [
+        {"user": "Sam", "comment": "Best for running!", "stars": 5}
+      ]
+    }
+    
+  ]
