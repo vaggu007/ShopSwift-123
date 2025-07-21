@@ -41,4 +41,4 @@ Sprint 1 Features:
 - Newsletter popup (first visit only)
 - Carousel with customer reviews
 - Product detail page and quick add-to-cart
-- No real database yet:images and data are in JSON/static folders for Sprint 1
+- No real database yet:images and data are in JSON/static folders for Sprint 1# ShopSwift-123
