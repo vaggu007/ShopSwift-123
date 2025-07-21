@@ -9,7 +9,8 @@ import Homepage from './pages/Homepage';
 import ProductsPage from './pages/ProductsPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import CategoriesPage from './pages/CategoriesPage';
-
+import CartPage from './pages/CartPage';
+import SearchPage from './pages/SearchPage';
 
 function App() {
   return (
@@ -22,6 +23,8 @@ function App() {
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/products/:id" element={<ProductDetailPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/search" element={<SearchPage />} />
           </Routes>
         </main>
         <Footer />
